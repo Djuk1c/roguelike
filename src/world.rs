@@ -6,6 +6,7 @@ pub struct WorldPlugin;
 impl Plugin for WorldPlugin {
     fn build(&self, app: &mut App) {
         app
+        .insert_resource(Map(vec![vec![0; MAP_SIZE as usize]; MAP_SIZE as usize]))
         .insert_resource(RoomsData(Vec::new()))
         .add_startup_system(spawn_world)
         .add_startup_system(load_rooms.before(spawn_world));
@@ -17,6 +18,7 @@ impl Plugin for WorldPlugin {
 struct Wall;
 
 // Resources
+pub struct Map(pub Vec<Vec<u32>>);
 struct RoomsData(Vec<Vec<String>>);
 
 fn find_rooms(room_count: u32) -> [[i32; 20]; 20] {

@@ -1,8 +1,11 @@
 use crate::*;
+use crate::world::Map;
 pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app
+        .insert_resource(MoveTimer(Timer::from_seconds(0.135, false)))
+        .insert_resource(MoveEnemies(false))
         .add_startup_system(spawn_camera)
         .add_startup_system(spawn_player)
         .add_system(player_movement.before(camera_follow))
@@ -10,10 +13,15 @@ impl Plugin for PlayerPlugin {
     }
 }
 
+// Components
 #[derive(Component)]
 struct Player;
 #[derive(Component)]
 struct Camera;
+
+// Resources
+struct MoveTimer(Timer);        // Timer that player has to wait to move again
+struct MoveEnemies(bool);       // Bool that updates after MoveTimer finishes, to move enemies
 
 fn spawn_player(mut commands: Commands) {
     let x = (ROOM_SIZE * 10.0 + ROOM_SIZE / 2.0) as u32;
