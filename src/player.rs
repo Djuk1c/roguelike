@@ -1,5 +1,7 @@
 use crate::*;
 use crate::world::Map;
+use crate::world::SpawnPos;
+
 pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
@@ -15,17 +17,17 @@ impl Plugin for PlayerPlugin {
 
 // Components
 #[derive(Component)]
-struct Player;
+pub struct Player;
 #[derive(Component)]
 struct Camera;
 
 // Resources
 struct MoveTimer(Timer);        // Timer that player has to wait to move again
-struct MoveEnemies(bool);       // Bool that updates after MoveTimer finishes, to move enemies
+pub struct MoveEnemies(pub bool);       // Bool that updates after MoveTimer finishes, to move enemies
 
-fn spawn_player(mut commands: Commands) {
-    let x = (ROOM_SIZE * 10.0 + ROOM_SIZE / 2.0) as u32;
-    let y = (ROOM_SIZE * 10.0 + ROOM_SIZE / 2.0) as u32;
+pub fn spawn_player(mut commands: Commands, spawn_pos: Res<SpawnPos>) {
+    let x = (spawn_pos.0 as f32 * ROOM_SIZE + ROOM_SIZE / 2.0) as u32;
+    let y = (spawn_pos.1 as f32 * ROOM_SIZE + ROOM_SIZE / 2.0) as u32;
     commands.spawn_bundle(SpriteBundle {
         sprite: Sprite {
             color: PLAYER_COLOR,
@@ -33,7 +35,7 @@ fn spawn_player(mut commands: Commands) {
         },
         transform: Transform {
             // We know that room_grid[10][10] is always first room, always filled, so we spawn there
-            translation: Vec3::new(ROOM_SIZE * 10.0 * CELL_SIZE + (ROOM_SIZE * CELL_SIZE) / 2.0, -ROOM_SIZE * 10.0 * CELL_SIZE - (ROOM_SIZE * CELL_SIZE) / 2.0, 10.0),
+            translation: Vec3::new(ROOM_SIZE * spawn_pos.0 as f32 * CELL_SIZE + (ROOM_SIZE * CELL_SIZE) / 2.0, -ROOM_SIZE * spawn_pos.1 as f32 * CELL_SIZE - (ROOM_SIZE * CELL_SIZE) / 2.0, 10.0),
             scale: Vec3::new(CELL_SIZE, CELL_SIZE, CELL_SIZE),
             ..default()
         },

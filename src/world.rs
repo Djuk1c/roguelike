@@ -1,4 +1,6 @@
 use crate::*;
+use crate::enemy::Enemy;
+use crate::player::spawn_player;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
@@ -8,8 +10,9 @@ impl Plugin for WorldPlugin {
         app
         .insert_resource(Map(vec![vec![0; MAP_SIZE as usize]; MAP_SIZE as usize]))
         .insert_resource(RoomsData(Vec::new()))
-        .add_startup_system(spawn_world)
-        .add_startup_system(load_rooms.before(spawn_world));
+        .insert_resource(SpawnPos(0, 0))
+        .add_startup_system(load_rooms.before(spawn_world))
+        .add_startup_system(spawn_world.before(spawn_player));
     }
 }
 
@@ -19,6 +22,7 @@ struct Wall;
 
 // Resources
 pub struct Map(pub Vec<Vec<u32>>);
+pub struct SpawnPos(pub u32, pub u32);
 struct RoomsData(Vec<Vec<String>>);
 
 fn find_rooms(room_count: u32) -> [[i32; 20]; 20] {
@@ -67,11 +71,13 @@ fn load_rooms(mut rooms: ResMut<RoomsData>) {
     }
 }
 
-fn spawn_world(mut commands: Commands, mut map: ResMut<Map>, rooms: Res<RoomsData>) {
-    let rooms_grid = find_rooms(8);
+fn spawn_world(mut commands: Commands, mut map: ResMut<Map>, rooms: Res<RoomsData>, mut spawn_pos: ResMut<SpawnPos>) {
+    let mut room_count = 0;
+    let rooms_grid = find_rooms(5);
     for (y, row) in rooms_grid.iter().enumerate() {
         for (x, _col) in row.iter().enumerate() {
             if rooms_grid[y][x] == 1 {
+                room_count += 1;
                 for y_room in 0..ROOM_SIZE as i32 {
                     for x_room in 0..ROOM_SIZE as i32 {
                         // Draw only the outter box
@@ -101,29 +107,40 @@ fn spawn_world(mut commands: Commands, mut map: ResMut<Map>, rooms: Res<RoomsDat
                     }
                 }
                 // Draw room data
+                if room_count == 1 {
+                    spawn_pos.0 = x as u32;
+                    spawn_pos.1 = y as u32;
+                    continue
+                }
                 let room_data = rooms.0[rand::thread_rng().gen_range(0, rooms.0.len())].clone();
-                println!("{:?}", room_data);
                 for cell in room_data {
-                    if cell.chars().nth(0).unwrap() == '1' { // It's a wall
-                        let x_room = cell.chars().nth(1).unwrap() as i32 - '0' as i32;      // Hackerman
-                        let y_room = cell.chars().nth(2).unwrap() as i32 - '0' as i32; 
-
-                        commands.spawn_bundle(SpriteBundle {
-                            sprite: Sprite {
-                                color: WALL_COLOR,
-                                ..default()
-                            },
-                            transform: Transform {
-                                translation: Vec3::new((x as f32 * CELL_SIZE * ROOM_SIZE) as f32 + (x_room + 1) as f32 * CELL_SIZE, (-(y as f32) * CELL_SIZE * ROOM_SIZE) as f32 + -((y_room + 1) as i32) as f32 * CELL_SIZE, 0.0),
-                                scale: Vec3::new(CELL_SIZE, CELL_SIZE, CELL_SIZE),
-                                ..default()
-                            },
-                            ..default()
-                        })
-                        .insert(Position((x as i32 + x_room + 1) as u32, (y as i32 + y_room + 1) as u32))
-                        .insert(Wall);
-                        map.0[(x as i32 * ROOM_SIZE as i32 + x_room + 1) as usize][(y as i32 * ROOM_SIZE as i32 + y_room + 1) as usize] = 1;
+                    let cell_type = cell.chars().nth(0).unwrap() as i32 - '0' as i32;   // Hackerman
+                    let x_room = cell.chars().nth(1).unwrap() as i32 - '0' as i32;
+                    let y_room = cell.chars().nth(2).unwrap() as i32 - '0' as i32; 
+                    let mut col = WALL_COLOR;
+                    if cell_type == 2 { // It's a enemy
+                        col = ENEMY_COLOR;
                     }
+                    let mut entity_commands = commands.spawn_bundle(SpriteBundle {
+                        sprite: Sprite {
+                            color: col,
+                            ..default()
+                        },
+                        transform: Transform {
+                            translation: Vec3::new((x as f32 * CELL_SIZE * ROOM_SIZE) as f32 + (x_room + 1) as f32 * CELL_SIZE, (-(y as f32) * CELL_SIZE * ROOM_SIZE) as f32 + -((y_room + 1) as i32) as f32 * CELL_SIZE, 0.0),
+                            scale: Vec3::new(CELL_SIZE, CELL_SIZE, CELL_SIZE),
+                            ..default()
+                        },
+                        ..default()
+                    });
+                    entity_commands.insert(Position((x as i32 * ROOM_SIZE as i32 + x_room + 1) as u32, (y as i32 * ROOM_SIZE as i32 + y_room + 1) as u32));
+                    if cell_type == 1 {
+                        entity_commands.insert(Wall);
+                    }
+                    else if cell_type == 2 {
+                        entity_commands.insert(Enemy);
+                    }
+                    map.0[(x as i32 * ROOM_SIZE as i32 + x_room + 1) as usize][(y as i32 * ROOM_SIZE as i32 + y_room + 1) as usize] = cell_type as u32;
                 }
             }
         }

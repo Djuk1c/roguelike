@@ -1,16 +1,19 @@
 mod player;
+mod enemy;
 mod world;
 mod globals;
+mod line_of_sight;
 
 use crate::globals::*;
-use crate::player::PlayerPlugin;
 use crate::world::WorldPlugin;
+use crate::player::PlayerPlugin;
+use crate::enemy::EnemyPlugin;
 use bevy::{prelude::*, window::*};
 use rand::Rng;
 
 // Components
 #[derive(Component)]
-struct Position (u32, u32);
+pub struct Position (u32, u32);
 
 fn main() {
     App::new()
@@ -25,6 +28,7 @@ fn main() {
         })
         .add_plugin(WorldPlugin)
         .add_plugin(PlayerPlugin)
+        .add_plugin(EnemyPlugin)
         .add_plugins(DefaultPlugins)
         .run();
 }
