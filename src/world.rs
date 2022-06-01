@@ -11,6 +11,7 @@ impl Plugin for WorldPlugin {
         .insert_resource(Map(vec![vec![0; MAP_SIZE as usize]; MAP_SIZE as usize]))
         .insert_resource(RoomsData(Vec::new()))
         .insert_resource(SpawnPos(0, 0))
+        .insert_resource(Level(0))
         .add_startup_system(load_rooms.before(spawn_world))
         .add_startup_system(spawn_world.before(spawn_player));
     }
@@ -23,6 +24,7 @@ struct Wall;
 // Resources
 pub struct Map(pub Vec<Vec<u32>>);
 pub struct SpawnPos(pub u32, pub u32);
+pub struct Level(u32);
 struct RoomsData(Vec<Vec<String>>);
 
 fn find_rooms(room_count: u32) -> [[i32; 20]; 20] {
@@ -71,9 +73,10 @@ fn load_rooms(mut rooms: ResMut<RoomsData>) {
     }
 }
 
-fn spawn_world(mut commands: Commands, mut map: ResMut<Map>, rooms: Res<RoomsData>, mut spawn_pos: ResMut<SpawnPos>) {
+fn spawn_world(mut commands: Commands, mut map: ResMut<Map>, mut rooms: ResMut<RoomsData>, mut spawn_pos: ResMut<SpawnPos>, level: Res<Level>) {
     let mut room_count = 0;
-    let rooms_grid = find_rooms(5);
+    let mut enemies_count = 0;
+    let rooms_grid = find_rooms(5 + level.0);
     for (y, row) in rooms_grid.iter().enumerate() {
         for (x, _col) in row.iter().enumerate() {
             if rooms_grid[y][x] == 1 {
@@ -112,14 +115,18 @@ fn spawn_world(mut commands: Commands, mut map: ResMut<Map>, rooms: Res<RoomsDat
                     spawn_pos.1 = y as u32;
                     continue
                 }
-                let room_data = rooms.0[rand::thread_rng().gen_range(0, rooms.0.len())].clone();
+                let rng_room = rand::thread_rng().gen_range(0, rooms.0.len());
+                let room_data = rooms.0[rng_room].clone();
+                rooms.0.remove(rng_room);
                 for cell in room_data {
                     let cell_type = cell.chars().nth(0).unwrap() as i32 - '0' as i32;   // Hackerman
                     let x_room = cell.chars().nth(1).unwrap() as i32 - '0' as i32;
                     let y_room = cell.chars().nth(2).unwrap() as i32 - '0' as i32; 
                     let mut col = WALL_COLOR;
+                    if cell_type == 2 && enemies_count == (2 + level.0) {continue}
                     if cell_type == 2 { // It's a enemy
                         col = ENEMY_COLOR;
+                        enemies_count += 1;
                     }
                     let mut entity_commands = commands.spawn_bundle(SpriteBundle {
                         sprite: Sprite {
