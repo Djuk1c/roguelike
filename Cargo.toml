@@ -12,3 +12,4 @@ opt-level = 3
 [dependencies]
 bevy = {version = "0.7.0", features = ["dynamic"]}
 rand = "0.7.3"
+queues = "1.0.2"

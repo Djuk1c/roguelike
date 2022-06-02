@@ -1,5 +1,5 @@
 use crate::*;
-use crate::enemy::Enemy;
+use crate::enemy::*;
 use crate::player::spawn_player;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -146,6 +146,7 @@ fn spawn_world(mut commands: Commands, mut map: ResMut<Map>, mut rooms: ResMut<R
                     }
                     else if cell_type == 2 {
                         entity_commands.insert(Enemy);
+                        entity_commands.insert(Alerted(false));
                     }
                     map.0[(x as i32 * ROOM_SIZE as i32 + x_room + 1) as usize][(y as i32 * ROOM_SIZE as i32 + y_room + 1) as usize] = cell_type as u32;
                 }
